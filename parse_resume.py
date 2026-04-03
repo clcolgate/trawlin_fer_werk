@@ -40,9 +40,31 @@ def extract_text_pdf(file_path: Path) -> str:
     text_parts = []
     with pdfplumber.open(file_path) as pdf:
         for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
+            words = page.extract_words(x_tolerance=2, y_tolerance=2)
+            if not words:
+                continue
+
+            # Reconstruct lines by grouping words with similar vertical position
+            lines = []
+            current_line: list[str] = []
+            current_y: float | None = None
+
+            for word in words:
+                word_y = round(word["top"], 1)
+                if current_y is None or abs(word_y - current_y) <= 3:
+                    current_line.append(word["text"])
+                    current_y = word_y
+                else:
+                    if current_line:
+                        lines.append(" ".join(current_line))
+                    current_line = [word["text"]]
+                    current_y = word_y
+
+            if current_line:
+                lines.append(" ".join(current_line))
+
+            if lines:
+                text_parts.append("\n".join(lines))
 
     if not text_parts:
         print(
