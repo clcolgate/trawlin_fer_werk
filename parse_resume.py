@@ -142,16 +142,20 @@ def validate_output(data: dict, schema: dict) -> list[str]:
     return errors
 
 
+def deep_merge(base: dict, override: dict) -> dict:
+    """Recursively merge override into base, preserving base keys missing from override."""
+    result = dict(base)
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def merge_with_template(extracted: dict, template: dict) -> dict:
     """Ensure all template keys are present in extracted data."""
-    result = dict(template)
-    result.update(extracted)
-    # Preserve form_fill_preferences defaults for any missing keys
-    if "form_fill_preferences" in template and "form_fill_preferences" in result:
-        merged_prefs = dict(template["form_fill_preferences"])
-        merged_prefs.update(result.get("form_fill_preferences") or {})
-        result["form_fill_preferences"] = merged_prefs
-    return result
+    return deep_merge(template, extracted)
 
 
 def main():
