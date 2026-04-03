@@ -1,0 +1,63 @@
+{
+  "personal_info": {
+    "full_name": null,
+    "first_name": null,
+    "last_name": null,
+    "email": null,
+    "phone": null,
+    "address": {
+      "street": null,
+      "city": null,
+      "state": null,
+      "zip": null,
+      "country": null
+    },
+    "linkedin_url": null,
+    "github_url": null,
+    "portfolio_url": null,
+    "website_url": null,
+    "pronouns": null,
+    "veteran_status": "prefer_not_to_say",
+    "disability_status": "prefer_not_to_say",
+    "ethnicity": null,
+    "gender": null,
+    "authorized_to_work": null,
+    "requires_sponsorship": null
+  },
+  "work_experience": [],
+  "education": [],
+  "skills": {
+    "technical": [],
+    "soft": [],
+    "tools": [],
+    "languages_programming": []
+  },
+  "certifications": [],
+  "projects": [],
+  "languages": [],
+  "volunteer_work": [],
+  "preferences": {
+    "desired_roles": [],
+    "desired_salary_min": null,
+    "desired_salary_max": null,
+    "salary_currency": "USD",
+    "work_arrangement": [],
+    "willing_to_relocate": null,
+    "relocation_cities": [],
+    "preferred_industries": [],
+    "excluded_industries": [],
+    "preferred_company_sizes": [],
+    "notice_period_days": null,
+    "available_start_date": null
+  },
+  "form_fill_preferences": {
+    "salary_response": "Open to negotiation",
+    "cover_letter_style": "always_pause",
+    "essay_questions_style": "always_pause",
+    "diversity_questions_style": "use_resume_data",
+    "references_available": true,
+    "references_on_request_text": "Available upon request",
+    "default_availability_text": "2 weeks",
+    "custom_overrides": {}
+  }
+}
