@@ -3,6 +3,7 @@ resume.json
 
 # Playwright browser profile (contains login sessions/cookies)
 .playwright-profile/
+.playwright-mcp/
 
 # Python
 __pycache__/
