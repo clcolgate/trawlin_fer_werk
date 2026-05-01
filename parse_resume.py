@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-parse_resume.py — Extract structured resume data using Claude API.
+parse_resume.py — Extract structured resume data using OpenAI or Anthropic APIs.
 
 Usage:
     python parse_resume.py resume.pdf
     python parse_resume.py resume.txt
+    python parse_resume.py resume.pdf --provider openai
+    python parse_resume.py resume.pdf --provider anthropic
     python parse_resume.py resume.pdf --output custom.json
     python parse_resume.py resume.pdf --force
-    python parse_resume.py resume.pdf --model claude-opus-4-6
+    python parse_resume.py resume.pdf --model gpt-4.1-mini
     python parse_resume.py resume.pdf --dry-run
 """
 
@@ -22,7 +24,11 @@ SCRIPT_DIR = Path(__file__).parent
 SCHEMA_PATH = SCRIPT_DIR / "resume_schema.json"
 TEMPLATE_PATH = SCRIPT_DIR / "resume.template.json"
 DEFAULT_OUTPUT = SCRIPT_DIR / "resume.json"
-DEFAULT_MODEL = "claude-haiku-4-5"
+DEFAULT_PROVIDER = "openai"
+DEFAULT_MODELS = {
+    "openai": "gpt-4.1-mini",
+    "anthropic": "claude-haiku-4-5",
+}
 
 
 def load_json(path: Path) -> dict:
@@ -44,7 +50,6 @@ def extract_text_pdf(file_path: Path) -> str:
             if not words:
                 continue
 
-            # Reconstruct lines by grouping words with similar vertical position
             lines = []
             current_line: list[str] = []
             current_y: float | None = None
@@ -70,7 +75,7 @@ def extract_text_pdf(file_path: Path) -> str:
         print(
             "Error: Could not extract text from PDF. Your file may be image-based (scanned).\n"
             "Try exporting as text from your PDF viewer, then run:\n"
-            f"  python parse_resume.py resume.txt"
+            "  python parse_resume.py resume.txt"
         )
         sys.exit(1)
 
@@ -81,10 +86,82 @@ def extract_text(file_path: Path) -> str:
     suffix = file_path.suffix.lower()
     if suffix == ".pdf":
         return extract_text_pdf(file_path)
-    elif suffix in (".txt", ".md", ".text"):
+    if suffix in (".txt", ".md", ".text"):
         return file_path.read_text(encoding="utf-8")
-    else:
-        print(f"Error: Unsupported file type '{suffix}'. Use a PDF or text file.")
+
+    print(f"Error: Unsupported file type '{suffix}'. Use a PDF or text file.")
+    sys.exit(1)
+
+
+def build_prompt(resume_text: str) -> str:
+    return (
+        "Extract all resume information from the following resume text into structured JSON.\n\n"
+        "Be thorough — extract every piece of information present. For fields not present "
+        "in the resume, use null or empty arrays as appropriate.\n\n"
+        "For dates, use ISO 8601 format (YYYY-MM-DD). If only month/year is given, use the "
+        "first of the month (e.g., 'May 2020' → '2020-05-01').\n\n"
+        "For the preferences section, make reasonable inferences from context (e.g., if the "
+        "resume shows only remote jobs, set work_arrangement to ['remote']).\n\n"
+        "For form_fill_preferences, use these defaults — do not invent values:\n"
+        "  salary_response: 'Open to negotiation'\n"
+        "  cover_letter_style: 'always_pause'\n"
+        "  essay_questions_style: 'always_pause'\n"
+        "  diversity_questions_style: 'use_resume_data'\n"
+        "  references_available: true\n"
+        "  references_on_request_text: 'Available upon request'\n"
+        "  default_availability_text: '2 weeks'\n"
+        "  custom_overrides: {}\n\n"
+        f"Resume text:\n---\n{resume_text}\n---"
+    )
+
+
+def call_openai(resume_text: str, schema: dict, model: str) -> dict:
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print("Error: openai not installed. Run: pip install -r requirements.txt")
+        sys.exit(1)
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        print(
+            "Error: OPENAI_API_KEY environment variable not set.\n"
+            "Set it with: export OPENAI_API_KEY=sk-..."
+        )
+        sys.exit(1)
+
+    client = OpenAI(api_key=api_key)
+    prompt = build_prompt(resume_text)
+
+    print(f"Calling {model} (OpenAI) to extract resume data...")
+    response = client.responses.create(
+        model=model,
+        input=[
+            {
+                "role": "system",
+                "content": "You extract resume text into valid JSON that strictly follows the provided schema.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "resume_data",
+                "schema": schema,
+                "strict": True,
+            }
+        },
+    )
+
+    output_text = getattr(response, "output_text", None)
+    if not output_text:
+        print("Error: OpenAI did not return structured JSON output.")
+        sys.exit(1)
+
+    try:
+        return json.loads(output_text)
+    except json.JSONDecodeError as exc:
+        print(f"Error: Failed to parse OpenAI JSON output: {exc}")
         sys.exit(1)
 
 
@@ -104,35 +181,15 @@ def call_claude(resume_text: str, schema: dict, model: str) -> dict:
         sys.exit(1)
 
     client = anthropic.Anthropic(api_key=api_key)
-
     tool_def = {
         "name": "save_resume_data",
         "description": "Save the extracted resume data as structured JSON",
         "input_schema": schema,
     }
 
-    prompt = (
-        "Extract all resume information from the following resume text and call the "
-        "save_resume_data tool with the structured data.\n\n"
-        "Be thorough — extract every piece of information present. For fields not present "
-        "in the resume, use null or empty arrays as appropriate.\n\n"
-        "For dates, use ISO 8601 format (YYYY-MM-DD). If only month/year is given, use the "
-        "first of the month (e.g., 'May 2020' → '2020-05-01').\n\n"
-        "For the preferences section, make reasonable inferences from context (e.g., if the "
-        "resume shows only remote jobs, set work_arrangement to ['remote']).\n\n"
-        "For form_fill_preferences, use these defaults — do not invent values:\n"
-        "  salary_response: 'Open to negotiation'\n"
-        "  cover_letter_style: 'always_pause'\n"
-        "  essay_questions_style: 'always_pause'\n"
-        "  diversity_questions_style: 'use_resume_data'\n"
-        "  references_available: true\n"
-        "  references_on_request_text: 'Available upon request'\n"
-        "  default_availability_text: '2 weeks'\n"
-        "  custom_overrides: {}\n\n"
-        f"Resume text:\n---\n{resume_text}\n---"
-    )
+    prompt = build_prompt(resume_text)
 
-    print(f"Calling {model} to extract resume data...")
+    print(f"Calling {model} (Anthropic) to extract resume data...")
     response = client.messages.create(
         model=model,
         max_tokens=4096,
@@ -165,7 +222,6 @@ def validate_output(data: dict, schema: dict) -> list[str]:
 
 
 def deep_merge(base: dict, override: dict) -> dict:
-    """Recursively merge override into base, preserving base keys missing from override."""
     result = dict(base)
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
@@ -176,15 +232,20 @@ def deep_merge(base: dict, override: dict) -> dict:
 
 
 def merge_with_template(extracted: dict, template: dict) -> dict:
-    """Ensure all template keys are present in extracted data."""
     return deep_merge(template, extracted)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract structured resume data using Claude API"
+        description="Extract structured resume data using OpenAI or Anthropic API"
     )
     parser.add_argument("resume_file", help="Path to resume PDF or text file")
+    parser.add_argument(
+        "--provider",
+        choices=["openai", "anthropic"],
+        default=DEFAULT_PROVIDER,
+        help=f"LLM provider to use (default: {DEFAULT_PROVIDER})",
+    )
     parser.add_argument(
         "--output", "-o",
         default=str(DEFAULT_OUTPUT),
@@ -197,8 +258,8 @@ def main():
     )
     parser.add_argument(
         "--model", "-m",
-        default=DEFAULT_MODEL,
-        help=f"Claude model to use (default: {DEFAULT_MODEL})",
+        default=None,
+        help="Model to use (defaults by provider: openai=gpt-4.1-mini, anthropic=claude-haiku-4-5)",
     )
     parser.add_argument(
         "--dry-run",
@@ -206,6 +267,8 @@ def main():
         help="Extract and print resume text only, do not call API",
     )
     args = parser.parse_args()
+
+    model = args.model or DEFAULT_MODELS[args.provider]
 
     resume_path = Path(args.resume_file)
     if not resume_path.exists():
@@ -233,7 +296,11 @@ def main():
         print("\nDry run complete. No API call made.")
         return
 
-    extracted = call_claude(resume_text, schema, args.model)
+    if args.provider == "openai":
+        extracted = call_openai(resume_text, schema, model)
+    else:
+        extracted = call_claude(resume_text, schema, model)
+
     merged = merge_with_template(extracted, template)
 
     validation_errors = validate_output(merged, schema)
