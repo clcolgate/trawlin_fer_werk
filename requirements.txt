@@ -1,4 +1,7 @@
-# Claude API for structured resume extraction
+# OpenAI API for structured resume extraction
+openai>=1.0.0
+
+# Optional Anthropic API support (legacy provider mode)
 anthropic>=0.40.0
 
 # PDF text extraction — better than PyPDF2 for multi-column resume layouts

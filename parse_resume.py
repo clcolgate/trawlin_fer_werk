@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-parse_resume.py — Extract structured resume data using Claude API.
+parse_resume.py — Extract structured resume data using an LLM API.
 
 Usage:
     python parse_resume.py resume.pdf
     python parse_resume.py resume.txt
     python parse_resume.py resume.pdf --output custom.json
     python parse_resume.py resume.pdf --force
-    python parse_resume.py resume.pdf --model claude-opus-4-6
+    python parse_resume.py resume.pdf --provider openai
+    python parse_resume.py resume.pdf --model gpt-4.1-mini
     python parse_resume.py resume.pdf --dry-run
 """
 
@@ -22,7 +23,11 @@ SCRIPT_DIR = Path(__file__).parent
 SCHEMA_PATH = SCRIPT_DIR / "resume_schema.json"
 TEMPLATE_PATH = SCRIPT_DIR / "resume.template.json"
 DEFAULT_OUTPUT = SCRIPT_DIR / "resume.json"
-DEFAULT_MODEL = "claude-haiku-4-5"
+DEFAULT_PROVIDER = "openai"
+DEFAULT_MODELS = {
+    "openai": "gpt-4.1-mini",
+    "anthropic": "claude-haiku-4-5",
+}
 
 
 def load_json(path: Path) -> dict:
@@ -88,6 +93,29 @@ def extract_text(file_path: Path) -> str:
         sys.exit(1)
 
 
+def build_extraction_prompt(resume_text: str) -> str:
+    return (
+        "Extract all resume information from the following resume text and call the "
+        "save_resume_data tool with the structured data.\n\n"
+        "Be thorough — extract every piece of information present. For fields not present "
+        "in the resume, use null or empty arrays as appropriate.\n\n"
+        "For dates, use ISO 8601 format (YYYY-MM-DD). If only month/year is given, use the "
+        "first of the month (e.g., 'May 2020' → '2020-05-01').\n\n"
+        "For the preferences section, make reasonable inferences from context (e.g., if the "
+        "resume shows only remote jobs, set work_arrangement to ['remote']).\n\n"
+        "For form_fill_preferences, use these defaults — do not invent values:\n"
+        "  salary_response: 'Open to negotiation'\n"
+        "  cover_letter_style: 'always_pause'\n"
+        "  essay_questions_style: 'always_pause'\n"
+        "  diversity_questions_style: 'use_resume_data'\n"
+        "  references_available: true\n"
+        "  references_on_request_text: 'Available upon request'\n"
+        "  default_availability_text: '2 weeks'\n"
+        "  custom_overrides: {}\n\n"
+        f"Resume text:\n---\n{resume_text}\n---"
+    )
+
+
 def call_claude(resume_text: str, schema: dict, model: str) -> dict:
     try:
         import anthropic
@@ -111,26 +139,7 @@ def call_claude(resume_text: str, schema: dict, model: str) -> dict:
         "input_schema": schema,
     }
 
-    prompt = (
-        "Extract all resume information from the following resume text and call the "
-        "save_resume_data tool with the structured data.\n\n"
-        "Be thorough — extract every piece of information present. For fields not present "
-        "in the resume, use null or empty arrays as appropriate.\n\n"
-        "For dates, use ISO 8601 format (YYYY-MM-DD). If only month/year is given, use the "
-        "first of the month (e.g., 'May 2020' → '2020-05-01').\n\n"
-        "For the preferences section, make reasonable inferences from context (e.g., if the "
-        "resume shows only remote jobs, set work_arrangement to ['remote']).\n\n"
-        "For form_fill_preferences, use these defaults — do not invent values:\n"
-        "  salary_response: 'Open to negotiation'\n"
-        "  cover_letter_style: 'always_pause'\n"
-        "  essay_questions_style: 'always_pause'\n"
-        "  diversity_questions_style: 'use_resume_data'\n"
-        "  references_available: true\n"
-        "  references_on_request_text: 'Available upon request'\n"
-        "  default_availability_text: '2 weeks'\n"
-        "  custom_overrides: {}\n\n"
-        f"Resume text:\n---\n{resume_text}\n---"
-    )
+    prompt = build_extraction_prompt(resume_text)
 
     print(f"Calling {model} to extract resume data...")
     response = client.messages.create(
@@ -149,6 +158,49 @@ def call_claude(resume_text: str, schema: dict, model: str) -> dict:
         sys.exit(1)
 
     return tool_block.input
+
+
+def call_openai(resume_text: str, schema: dict, model: str) -> dict:
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print("Error: openai not installed. Run: pip install -r requirements.txt")
+        sys.exit(1)
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        print(
+            "Error: OPENAI_API_KEY environment variable not set.\n"
+            "Set it with: export OPENAI_API_KEY=sk-..."
+        )
+        sys.exit(1)
+
+    client = OpenAI(api_key=api_key)
+    prompt = build_extraction_prompt(resume_text)
+    print(f"Calling {model} to extract resume data...")
+    response = client.responses.create(
+        model=model,
+        input=prompt,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "resume_data",
+                "strict": True,
+                "schema": schema,
+            }
+        },
+    )
+
+    output_text = getattr(response, "output_text", None)
+    if not output_text:
+        print("Error: OpenAI did not return structured data.")
+        sys.exit(1)
+
+    try:
+        return json.loads(output_text)
+    except json.JSONDecodeError as e:
+        print(f"Error: OpenAI returned invalid JSON: {e}")
+        sys.exit(1)
 
 
 def validate_output(data: dict, schema: dict) -> list[str]:
@@ -182,7 +234,7 @@ def merge_with_template(extracted: dict, template: dict) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract structured resume data using Claude API"
+        description="Extract structured resume data using OpenAI or Anthropic API"
     )
     parser.add_argument("resume_file", help="Path to resume PDF or text file")
     parser.add_argument(
@@ -197,8 +249,14 @@ def main():
     )
     parser.add_argument(
         "--model", "-m",
-        default=DEFAULT_MODEL,
-        help=f"Claude model to use (default: {DEFAULT_MODEL})",
+        default=None,
+        help="Model to use (default depends on provider)",
+    )
+    parser.add_argument(
+        "--provider",
+        choices=["openai", "anthropic"],
+        default=DEFAULT_PROVIDER,
+        help=f"LLM provider to use (default: {DEFAULT_PROVIDER})",
     )
     parser.add_argument(
         "--dry-run",
@@ -233,7 +291,12 @@ def main():
         print("\nDry run complete. No API call made.")
         return
 
-    extracted = call_claude(resume_text, schema, args.model)
+    model = args.model or DEFAULT_MODELS[args.provider]
+    extracted = (
+        call_openai(resume_text, schema, model)
+        if args.provider == "openai"
+        else call_claude(resume_text, schema, model)
+    )
     merged = merge_with_template(extracted, template)
 
     validation_errors = validate_output(merged, schema)

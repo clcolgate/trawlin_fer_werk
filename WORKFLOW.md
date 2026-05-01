@@ -1,6 +1,6 @@
 # Job Application Automation
 
-Fill out job application forms automatically using Claude Code + Playwright. Claude reads your resume data, navigates to the job posting, and fills in the fields — pausing to ask you on anything that needs judgment.
+Fill out job application forms automatically using Codex/ChatGPT + Playwright. The assistant reads your resume data, navigates to the job posting, and fills in the fields — pausing to ask you on anything that needs judgment.
 
 ---
 
@@ -11,15 +11,15 @@ Fill out job application forms automatically using Claude Code + Playwright. Cla
 pip install -r requirements.txt
 ```
 
-### 2. Set your Anthropic API key
+### 2. Set your OpenAI API key
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
 ```
 Add to `~/.bashrc` or `~/.zshrc` to make it permanent.
 
 ### 3. Parse your resume
 ```bash
-python parse_resume.py /path/to/your-resume.pdf
+python parse_resume.py /path/to/your-resume.pdf --provider openai
 ```
 This creates `resume.json` (gitignored — stays on your machine only).
 
@@ -42,15 +42,15 @@ claude
 ```
 The Playwright MCP tools load automatically from `.claude/settings.json`.
 
-### Step 2: Give Claude the job URL
-Tell Claude something like:
+### Step 2: Give Codex/ChatGPT the job URL
+Tell it something like:
 
 > "Fill out this job application: https://jobs.lever.co/company/job-id
 > Use my resume.json for all data. Pause and ask me before writing any cover letter,
 > salary field, or open-ended question."
 
 ### Step 3: Watch and approve
-Claude will:
+The assistant will:
 - Navigate to the URL in a real browser window you can see
 - Fill standard fields automatically (name, contact, work history, education, skills)
 - **Pause and ask you** for:
@@ -61,7 +61,7 @@ Claude will:
   - Anything it can't confidently answer from your data
 
 ### Step 4: Final review
-Claude will stop before clicking Submit and summarize what it filled. You give final approval.
+It will stop before clicking Submit and summarize what it filled. You give final approval.
 
 ---
 
@@ -75,7 +75,7 @@ Works with: Greenhouse, Lever, Ashby, Workday, iCIMS, BambooHR, SmartRecruiters,
 
 | Situation | What to do |
 |-----------|-----------|
-| **Resume file upload field** | Claude can't trigger the file chooser — click "Upload Resume" yourself when prompted |
+| **Resume file upload field** | The assistant can't trigger the file chooser — click "Upload Resume" yourself when prompted |
 | **CAPTCHA or 2FA** | Complete it in the visible browser window, then tell Claude to continue |
 | **Login required** | Log in manually in the browser window before telling Claude to proceed |
 | **Form detects automation** | Add `"--user-agent", "Mozilla/5.0 ..."` to args in `.claude/settings.json` |
@@ -111,12 +111,12 @@ To stay logged into job boards between Claude Code sessions, add `--user-data-di
 
 **`ModuleNotFoundError`** — Run `pip install -r requirements.txt`
 
-**`ANTHROPIC_API_KEY not set`** — Run `export ANTHROPIC_API_KEY=sk-ant-...`
+**`OPENAI_API_KEY not set`** — Run `export OPENAI_API_KEY=sk-...`
 
 **PDF text extraction returns empty** — Your PDF is image-based (scanned). Export as text from your PDF viewer, then run `python parse_resume.py resume.txt`
 
 **Playwright can't find Chrome** — Edit `.claude/settings.json` and change `"chrome"` to `"chromium"` or `"firefox"`
 
-**Claude skipped a field** — Check `resume.json` for that data. If missing, add it and retry.
+**Assistant skipped a field** — Check `resume.json` for that data. If missing, add it and retry.
 
 **Want to re-parse your resume** — Run `python parse_resume.py resume.pdf --force` to overwrite `resume.json`
