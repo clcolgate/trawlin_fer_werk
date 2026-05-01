@@ -115,6 +115,24 @@ def build_prompt(resume_text: str) -> str:
     )
 
 
+def make_openai_strict_schema(schema: dict) -> dict:
+    """Convert a JSON schema into OpenAI strict-json-schema compatible form."""
+    if isinstance(schema, dict):
+        normalized = {k: make_openai_strict_schema(v) for k, v in schema.items()}
+
+        if normalized.get("type") == "object" and isinstance(normalized.get("properties"), dict):
+            keys = list(normalized["properties"].keys())
+            normalized["required"] = keys
+            normalized.setdefault("additionalProperties", False)
+
+        return normalized
+
+    if isinstance(schema, list):
+        return [make_openai_strict_schema(item) for item in schema]
+
+    return schema
+
+
 def call_openai(resume_text: str, schema: dict, model: str) -> dict:
     try:
         from openai import OpenAI
@@ -132,6 +150,7 @@ def call_openai(resume_text: str, schema: dict, model: str) -> dict:
 
     client = OpenAI(api_key=api_key)
     prompt = build_prompt(resume_text)
+    strict_schema = make_openai_strict_schema(schema)
 
     print(f"Calling {model} (OpenAI) to extract resume data...")
     response = client.responses.create(
@@ -147,7 +166,7 @@ def call_openai(resume_text: str, schema: dict, model: str) -> dict:
             "format": {
                 "type": "json_schema",
                 "name": "resume_data",
-                "schema": schema,
+                "schema": strict_schema,
                 "strict": True,
             }
         },
