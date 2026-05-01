@@ -11,19 +11,30 @@ Fill out job application forms automatically using Claude Code + Playwright. Cla
 pip install -r requirements.txt
 ```
 
-### 2. Set your Anthropic API key
+### 2. Set your OpenAI API key (recommended)
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
 ```
 Add to `~/.bashrc` or `~/.zshrc` to make it permanent.
 
-### 3. Parse your resume
+### 3. (Optional fallback) Set your Anthropic API key
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+Only needed if you run `parse_resume.py --provider anthropic`.
+
+### 4. Parse your resume (OpenAI default)
 ```bash
 python parse_resume.py /path/to/your-resume.pdf
 ```
 This creates `resume.json` (gitignored — stays on your machine only).
 
-### 4. Review resume.json
+Use Anthropic fallback compatibility mode if needed:
+```bash
+python parse_resume.py /path/to/your-resume.pdf --provider anthropic
+```
+
+### 5. Review resume.json
 Open `resume.json` and check a few key fields:
 - `form_fill_preferences.salary_response` — what to type when asked for salary
 - `preferences.work_arrangement` — remote / hybrid / onsite
@@ -111,7 +122,9 @@ To stay logged into job boards between Claude Code sessions, add `--user-data-di
 
 **`ModuleNotFoundError`** — Run `pip install -r requirements.txt`
 
-**`ANTHROPIC_API_KEY not set`** — Run `export ANTHROPIC_API_KEY=sk-ant-...`
+**`OPENAI_API_KEY not set`** — Run `export OPENAI_API_KEY=sk-...` (default provider)
+
+**`ANTHROPIC_API_KEY not set`** — Set it only when using `--provider anthropic`
 
 **PDF text extraction returns empty** — Your PDF is image-based (scanned). Export as text from your PDF viewer, then run `python parse_resume.py resume.txt`
 
