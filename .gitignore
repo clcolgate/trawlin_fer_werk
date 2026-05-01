@@ -1,0 +1,29 @@
+# Resume data — contains PII, never commit
+resume.json
+
+# Playwright browser profile (contains login sessions/cookies)
+.playwright-profile/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
