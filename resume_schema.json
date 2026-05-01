@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "resume_schema.json",
+  "title": "Resume",
+  "description": "Structured resume data for job application automation",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "personal_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "full_name": { "type": ["string", "null"] },
+        "first_name": { "type": ["string", "null"] },
+        "last_name": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] },
+        "phone": { "type": ["string", "null"] },
+        "address": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "street": { "type": ["string", "null"] },
+            "city": { "type": ["string", "null"] },
+            "state": { "type": ["string", "null"] },
+            "zip": { "type": ["string", "null"] },
+            "country": { "type": ["string", "null"] }
+          }
+        },
+        "linkedin_url": { "type": ["string", "null"] },
+        "github_url": { "type": ["string", "null"] },
+        "portfolio_url": { "type": ["string", "null"] },
+        "website_url": { "type": ["string", "null"] },
+        "pronouns": { "type": ["string", "null"] },
+        "veteran_status": {
+          "type": ["string", "null"],
+          "enum": ["yes", "no", "prefer_not_to_say", null]
+        },
+        "disability_status": {
+          "type": ["string", "null"],
+          "enum": ["yes", "no", "prefer_not_to_say", null]
+        },
+        "ethnicity": { "type": ["string", "null"] },
+        "gender": { "type": ["string", "null"] },
+        "authorized_to_work": { "type": ["boolean", "null"] },
+        "requires_sponsorship": { "type": ["boolean", "null"] }
+      }
+    },
+    "work_experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "company": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"] },
+          "location": { "type": ["string", "null"] },
+          "start_date": { "type": ["string", "null"], "description": "ISO 8601 date (YYYY-MM-DD)" },
+          "end_date": { "type": ["string", "null"], "description": "ISO 8601 date, or null if current" },
+          "is_current": { "type": ["boolean", "null"] },
+          "employment_type": {
+            "type": ["string", "null"],
+            "enum": ["full_time", "part_time", "contract", "freelance", "internship", null]
+          },
+          "description": { "type": ["string", "null"] },
+          "achievements": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "institution": { "type": ["string", "null"] },
+          "degree": { "type": ["string", "null"] },
+          "field_of_study": { "type": ["string", "null"] },
+          "start_date": { "type": ["string", "null"] },
+          "end_date": { "type": ["string", "null"] },
+          "gpa": { "type": ["number", "null"] },
+          "gpa_scale": { "type": ["number", "null"], "default": 4.0 },
+          "honors": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "relevant_coursework": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "technical": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "soft": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "languages_programming": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": ["string", "null"] },
+          "issuer": { "type": ["string", "null"] },
+          "issue_date": { "type": ["string", "null"] },
+          "expiry_date": { "type": ["string", "null"] },
+          "credential_id": { "type": ["string", "null"] },
+          "credential_url": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] },
+          "url": { "type": ["string", "null"] },
+          "start_date": { "type": ["string", "null"] },
+          "end_date": { "type": ["string", "null"] },
+          "technologies": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "role": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "language": { "type": ["string", "null"] },
+          "proficiency": {
+            "type": ["string", "null"],
+            "enum": ["native", "fluent", "professional", "conversational", "basic", null]
+          }
+        }
+      }
+    },
+    "volunteer_work": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organization": { "type": ["string", "null"] },
+          "role": { "type": ["string", "null"] },
+          "start_date": { "type": ["string", "null"] },
+          "end_date": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "desired_roles": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "desired_salary_min": { "type": ["integer", "null"] },
+        "desired_salary_max": { "type": ["integer", "null"] },
+        "salary_currency": { "type": ["string", "null"], "default": "USD" },
+        "work_arrangement": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["remote", "hybrid", "onsite"]
+          }
+        },
+        "willing_to_relocate": { "type": ["boolean", "null"] },
+        "relocation_cities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "preferred_industries": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_industries": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "preferred_company_sizes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["startup", "small", "medium", "large", "enterprise"]
+          }
+        },
+        "notice_period_days": { "type": ["integer", "null"] },
+        "available_start_date": { "type": ["string", "null"] }
+      }
+    },
+    "form_fill_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "salary_response": {
+          "type": ["string", "null"],
+          "description": "What to type when a form asks for salary expectation"
+        },
+        "cover_letter_style": {
+          "type": ["string", "null"],
+          "enum": ["always_pause", "auto_generate", "skip", null]
+        },
+        "essay_questions_style": {
+          "type": ["string", "null"],
+          "enum": ["always_pause", "auto_generate", null]
+        },
+        "diversity_questions_style": {
+          "type": ["string", "null"],
+          "enum": ["always_pause", "use_resume_data", "skip", null]
+        },
+        "references_available": { "type": ["boolean", "null"] },
+        "references_on_request_text": { "type": ["string", "null"] },
+        "default_availability_text": { "type": ["string", "null"] },
+        "custom_overrides": {
+          "type": "object",
+          "description": "Free-form key/value pairs for unusual form fields",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}
